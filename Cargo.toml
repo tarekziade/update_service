@@ -7,4 +7,4 @@ authors = ["Tarek Ziade <tarek@ziade.org>"]
 hyper = "0.9"
 env_logger = "0.3.3"
 rustc-serialize = "0.3.19"
-
+time = "0.1"

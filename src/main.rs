@@ -1,6 +1,7 @@
 #![deny(warnings)]
 extern crate hyper;
 extern crate rustc_serialize;
+extern crate time;
 
 use std::io::Read;
 use hyper::{Client};
@@ -11,7 +12,7 @@ use rustc_serialize::json;
 #[derive(Debug)]
 struct KintoUpdate {
     host: String,
-    last_modified: usize,
+    last_modified: i64,
     bucket: String,
     id: String,
     collection: String,
@@ -25,7 +26,9 @@ pub struct KintoUpdates {
 
 
 fn main() {
-
+    let timespec = time::get_time();
+    let mills = timespec.sec + timespec.nsec as i64 / 1000 / 1000;
+    let one_day = 60 * 60 * 24;
     let url = "https://firefox.settings.services.mozilla.com/v1/buckets/monitor/collections/changes/records";
     let client = Client::new();
 
@@ -41,6 +44,15 @@ fn main() {
     };
 
     let updates: KintoUpdates = json::decode(&buf).unwrap();
-    println!("{:?}", updates);
+
+    for update in &updates.data {
+       // is this update less than 24h ?
+       let delta = mills - (update.last_modified / 1000);
+       if delta < one_day {
+         println!("Fresh update {:?}", delta);
+       } else {
+         println!("Update older than one day {:?}", delta);
+       }
+    }
 }
 
