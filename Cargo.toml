@@ -9,3 +9,7 @@ env_logger = "0.3.3"
 rustc-serialize = "0.3.19"
 time = "0.1"
 rust-ini = "*"
+
+[dependencies.rusoto]
+version = "*"
+features = ["s3"]

@@ -5,12 +5,12 @@ extern crate time;
 extern crate ini;
 
 use ini::Ini;
-use std::io::Read;
 use std::env;
 use std::path::{Path};
-use hyper::{Client};
 use rustc_serialize::json;
 
+mod aws;
+mod kinto;
 
 #[derive(Debug)]
 #[derive(RustcEncodable)]
@@ -23,23 +23,6 @@ struct Update {
 #[derive(Debug)]
 pub struct Updates {
   data: Vec<Update>
-}
-
-
-#[derive(RustcDecodable)]
-#[derive(Debug)]
-struct KintoUpdate {
-    host: String,
-    last_modified: i64,
-    bucket: String,
-    id: String,
-    collection: String
-}
-
-#[derive(RustcDecodable)]
-#[derive(Debug)]
-pub struct KintoUpdates {
-  data: Vec<KintoUpdate>
 }
 
 
@@ -59,24 +42,12 @@ fn main() {
     let mills = timespec.sec + timespec.nsec as i64 / 1000 / 1000;
     let one_day = 60 * 60 * 24;
     let url = services.get("kinto_url").unwrap();
-    let client = Client::new();
 
-    let mut response = match client.get(url).send() {
-        Ok(response) => response,
-        Err(_) => panic!("Whoops."),
-    };
-
-   let mut buf = String::new();
-   match response.read_to_string(&mut buf) {
-        Ok(_) => (),
-        Err(_) => panic!("I give up."),
-    };
-
-    let updates: KintoUpdates = json::decode(&buf).unwrap();
+    let kinto_updates = kinto::get_updates(url);
 
     let mut general_updates = vec![];
 
-    for update in &updates.data {
+    for update in &kinto_updates.data {
        // is this update less than 24h ?
        let delta = mills - (update.last_modified / 1000);
        if delta < one_day {
@@ -95,5 +66,7 @@ fn main() {
     let result = Updates {data: general_updates};
 
     println!("{}", json::as_pretty_json(&result));
+    aws::write_s3_file();
+
 }
 
