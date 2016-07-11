@@ -2,8 +2,12 @@
 extern crate hyper;
 extern crate rustc_serialize;
 extern crate time;
+extern crate ini;
 
+use ini::Ini;
 use std::io::Read;
+use std::env;
+use std::path::{Path};
 use hyper::{Client};
 use rustc_serialize::json;
 
@@ -40,10 +44,21 @@ pub struct KintoUpdates {
 
 
 fn main() {
+    let cwd = env::current_dir().unwrap();
+    let conf_file = Path::new(&cwd).join("conf.ini");
+    let conf;
+
+    match conf_file.to_str() {
+        None => panic!("new path is not a valid UTF-8 sequence"),
+        Some(s) => conf = Ini::load_from_file(s).unwrap(),
+    }
+
+    let services = conf.section(Some("services".to_owned())).unwrap();
+
     let timespec = time::get_time();
     let mills = timespec.sec + timespec.nsec as i64 / 1000 / 1000;
     let one_day = 60 * 60 * 24;
-    let url = "https://firefox.settings.services.mozilla.com/v1/buckets/monitor/collections/changes/records";
+    let url = services.get("kinto_url").unwrap();
     let client = Client::new();
 
     let mut response = match client.get(url).send() {
