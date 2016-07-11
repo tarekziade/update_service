@@ -14,19 +14,19 @@ mod kinto;
 
 #[derive(Debug)]
 #[derive(RustcEncodable)]
-struct Update {
-    last_modified: i64,
-    id: String
+pub struct Update {
+    pub last_modified: i64,
+    pub id: String
 }
 
 #[derive(RustcEncodable)]
 #[derive(Debug)]
 pub struct Updates {
-  data: Vec<Update>
+  pub data: Vec<Update>
 }
 
 
-fn generate_update(conf: &Ini) -> Updates {
+pub fn generate_update(conf: &Ini) -> Updates {
     let services = conf.section(Some("services".to_owned())).unwrap();
     let timespec = time::get_time();
     let mills = timespec.sec + timespec.nsec as i64 / 1000 / 1000;
