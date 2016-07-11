@@ -8,6 +8,20 @@ use hyper::{Client};
 use rustc_serialize::json;
 
 
+#[derive(Debug)]
+#[derive(RustcEncodable)]
+struct Update {
+    last_modified: i64,
+    id: String
+}
+
+#[derive(RustcEncodable)]
+#[derive(Debug)]
+pub struct Updates {
+  data: Vec<Update>
+}
+
+
 #[derive(RustcDecodable)]
 #[derive(Debug)]
 struct KintoUpdate {
@@ -15,7 +29,7 @@ struct KintoUpdate {
     last_modified: i64,
     bucket: String,
     id: String,
-    collection: String,
+    collection: String
 }
 
 #[derive(RustcDecodable)]
@@ -45,14 +59,26 @@ fn main() {
 
     let updates: KintoUpdates = json::decode(&buf).unwrap();
 
+    let mut general_updates = vec![];
+
     for update in &updates.data {
        // is this update less than 24h ?
        let delta = mills - (update.last_modified / 1000);
        if delta < one_day {
          println!("Fresh update {:?}", delta);
        } else {
+         // we'll skip those later
          println!("Update older than one day {:?}", delta);
        }
+
+       if &*update.collection == "certificates" {
+          let id = String::from("onecrl");
+          general_updates.push(Update { id: id, last_modified: update.last_modified });
+       }
     }
+
+    let result = Updates {data: general_updates};
+
+    println!("{}", json::as_pretty_json(&result));
 }
 
