@@ -3,12 +3,17 @@ name = "update_service"
 version = "0.1.0"
 authors = ["Tarek Ziade <tarek@ziade.org>"]
 
+[lib]
+name = "update_service"
+crate-type = ["dylib", "rlib"]
+
 [dependencies]
 hyper = "0.9"
 env_logger = "0.3.3"
 rustc-serialize = "0.3.19"
 time = "0.1"
 rust-ini = "*"
+libc = "*"
 
 [dependencies.rusoto]
 version = "*"

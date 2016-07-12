@@ -3,11 +3,14 @@ extern crate hyper;
 extern crate rustc_serialize;
 extern crate time;
 extern crate ini;
+extern crate libc;
 
 use ini::Ini;
 use std::env;
 use std::path::{Path};
 use rustc_serialize::json;
+use std::ffi::CStr;
+use libc::c_char;
 
 mod aws;
 mod kinto;
@@ -58,7 +61,10 @@ pub fn generate_update(conf: &Ini) -> Updates {
 }
 
 
-pub fn run() {
+pub fn run(event: String, context: String) -> i32 {
+    println!("Event: {}", event);
+    println!("Context: {}", context);
+
     // read the conf file
     let cwd = env::current_dir().unwrap();
     let conf_file = Path::new(&cwd).join("conf.ini");
@@ -75,4 +81,17 @@ pub fn run() {
     // let result = json::as_pretty_json(&updates);
     let encoded = json::encode(&updates).unwrap();
     aws::write_s3_file("firefoxpoll", "updates.json", &encoded);
+    return 0;
+}
+
+
+#[no_mangle]
+pub extern "C" fn handle(c_event: *const c_char,
+                         c_context: *const c_char) -> i32 {
+    let event = unsafe { CStr::from_ptr(c_event).to_string_lossy()
+                         .into_owned() };
+    let context = unsafe { CStr::from_ptr(c_context).to_string_lossy()
+                           .into_owned() };
+
+    run(event, context)
 }

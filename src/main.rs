@@ -4,5 +4,8 @@ use update_service::run;
 
 
 fn main() {
-    run();
+    let event = String::from("event");
+    let context = String::from("context");
+
+    run(event, context);
 }
