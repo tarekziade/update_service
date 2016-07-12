@@ -2,13 +2,10 @@
 extern crate hyper;
 extern crate rustc_serialize;
 extern crate time;
-extern crate ini;
 extern crate libc;
 
-use ini::Ini;
-use std::env;
-use std::path::{Path};
 use rustc_serialize::json;
+use rustc_serialize::json::Json;
 use std::ffi::CStr;
 use libc::c_char;
 
@@ -29,15 +26,13 @@ pub struct Updates {
 }
 
 
-pub fn generate_update(conf: &Ini) -> Updates {
-    let services = conf.section(Some("services".to_owned())).unwrap();
+pub fn generate_update(kinto_url: &str) -> Updates {
     let timespec = time::get_time();
     let mills = timespec.sec + timespec.nsec as i64 / 1000 / 1000;
     let one_day = 60 * 60 * 24;
 
     // kinto updates
-    let url = services.get("kinto_url").unwrap();
-    let kinto_updates = kinto::get_updates(url);
+    let kinto_updates = kinto::get_updates(kinto_url);
     let mut general_updates = vec![];
 
     for update in &kinto_updates.data {
@@ -62,25 +57,27 @@ pub fn generate_update(conf: &Ini) -> Updates {
 
 
 pub fn run(event: String, context: String) -> i32 {
-    println!("Event: {}", event);
-    println!("Context: {}", context);
+    let decoded_event = Json::from_str(&event).unwrap();
+    let event_obj = decoded_event.as_object().unwrap();
 
-    // read the conf file
-    let cwd = env::current_dir().unwrap();
-    let conf_file = Path::new(&cwd).join("conf.ini");
-    let conf;
-    match conf_file.to_str() {
-        None => panic!("new path is not a valid UTF-8 sequence"),
-        Some(s) => conf = Ini::load_from_file(s).unwrap(),
-    }
+    let decoded_context = Json::from_str(&context).unwrap();
+    let context_obj = decoded_context.as_object().unwrap();
+
+    println!("Event: {:?}", event_obj);
+    println!("Context: {:?}", context_obj);
+
+    // read the options
+    let s3_bucket = event_obj.get("s3_bucket").unwrap();
+    let s3_filename = event_obj.get("s3_filename").unwrap();
+    let kinto_url = event_obj.get("kinto_url").unwrap().as_string().unwrap();
 
     // generate the update
-    let updates = generate_update(&conf);
+    let updates = generate_update(&kinto_url);
 
     // write the update into the s3 bucket
     // let result = json::as_pretty_json(&updates);
     let encoded = json::encode(&updates).unwrap();
-    aws::write_s3_file("firefoxpoll", "updates.json", &encoded);
+    aws::write_s3_file(&s3_bucket.as_string().unwrap(), &s3_filename.as_string().unwrap(), &encoded);
     return 0;
 }
 
