@@ -40,6 +40,3 @@ if __name__ == '__main__':
              'kinto_url': 'https://firefox.settings.services.mozilla.com/v1/buckets/monitor/collections/changes/records'
              }
     handler(event, {})
-
-
-
